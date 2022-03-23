@@ -7,11 +7,6 @@ use std::{iter::Sum, collections::HashSet};
 
 type SRes = SC2Result<()>;
 
-const OVIE_BUILD:HashSet<AbilityId> = {
-    let mut t = HashSet::new();
-    t.insert(AbilityId::LarvaTrainOverlord);
-    t
-};
 
 #[bot]
 #[derive(Default)]
@@ -20,11 +15,6 @@ struct Hassium{
     latest_sat: u8
 }
 impl Hassium{
-    fn init(mut self) -> Self {
-        self.latest_hatch = Some(self.units.my.townhalls.first().unwrap().clone());
-        self.latest_sat = 12;
-        self
-    }
     fn next_hatch_loc(units:&PlayerUnits, expands: Vec<Point2>) -> Point2{
 
         let taken = units.townhalls.iter()
@@ -41,7 +31,7 @@ impl Hassium{
         let dist = |point:&Point2| taken_midpoint.distance(point);
         available.min_by(|point1,point2|dist(point1).partial_cmp(&dist(point2)).unwrap_or(std::cmp::Ordering::Equal)).unwrap().clone()
     }
-    fn currently_ordering(units:&Units, ids:HashSet<AbilityId>) -> HashSet<AbilityId>{
+    fn currently_ordering(units:&Units, ids:&HashSet<AbilityId>) -> HashSet<AbilityId>{
         //the fact that this has to be so complicated is dumb
         ids.iter()
             .filter(|a| units.iter()
@@ -53,6 +43,11 @@ impl Hassium{
     }
 }
 impl Player for Hassium{
+    fn on_start(&mut self) -> SC2Result<()> {
+        self.latest_hatch = Some(self.units.my.townhalls.first().unwrap().clone());
+        self.latest_sat = 12;
+        Ok(())
+    }
     fn get_player_settings(&self) -> PlayerSettings {
         PlayerSettings::new(Race::Zerg)
             .with_name("Hassium")
@@ -61,13 +56,19 @@ impl Player for Hassium{
     }
     fn on_step(&mut self, iteration: usize) -> SRes {
 
+        let OVIE_BUILD:HashSet<AbilityId> = {
+            let mut t = HashSet::new();
+            t.insert(AbilityId::LarvaTrainOverlord);
+            t
+        };
+
         while self.latest_sat < 16 {
             if self.can_afford(UnitTypeId::Drone, true) {
                 self.units.my.larvas.pop().unwrap().train(UnitTypeId::Drone,false);
             }
             else if self.supply_left < 1 {
                 //should probably split off this condition into a method
-                if Hassium::currently_ordering(&self.units.my.units, OVIE_BUILD).is_empty() {
+                if Hassium::currently_ordering(&self.units.my.units, &OVIE_BUILD).is_empty() {
                     self.units.my.larvas.pop().unwrap().train(UnitTypeId::Overlord, false);
                 }
             }
@@ -93,7 +94,7 @@ impl Player for Hassium{
 }
 
 fn main() -> SRes {
-    run_vs_human(&mut Hassium::default().init(), 
+    run_vs_human(&mut Hassium::default(), 
         PlayerSettings::new(Race::Zerg)
             .with_name("pagwin")
             .raw_crop_to_playable_area(false)
