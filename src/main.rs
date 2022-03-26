@@ -99,6 +99,6 @@ fn main() -> SRes {
             .with_name("pagwin")
             .raw_crop_to_playable_area(false)
             .raw_affects_selection(true),
-        "EternalEmpireLE",
+        "BerlingradAIE",
         LaunchOptions::default())
 }

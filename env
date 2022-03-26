@@ -1,0 +1,3 @@
+SC2PF=WineLinux
+WINE=/usr/bin/wine
+SC2PATH=/home/fedora/Games/starcraft-ii/drive_c/Program Files (x86)/StarCraft II
