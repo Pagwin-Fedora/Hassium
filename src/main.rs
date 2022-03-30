@@ -65,13 +65,14 @@ impl Player for Hassium{
             t
         };
 
-        while self.latest_sat < 16 {
+        if self.latest_sat < 16 {
             if self.can_afford(UnitTypeId::Drone, true) {
                 match self.units.my.larvas.pop(){
                     Some(larva)=>{
                         larva.train(UnitTypeId::Drone,false);
-                    }
-                    None=> return Ok(())
+                        self.latest_sat +=1;
+                    },
+                    None=>{}
                 }
             }
             else if self.supply_left < 1 {
@@ -82,7 +83,7 @@ impl Player for Hassium{
             }
         }
         
-        if self.minerals >= 350 && !self.units.my.larvas.is_empty() && self.latest_sat == 16 {
+        else if self.minerals >= 350 && !self.units.my.larvas.is_empty(){
 
             let dist = |point:Point2| self.latest_hatch.clone().unwrap()
                 .position().distance(point);
