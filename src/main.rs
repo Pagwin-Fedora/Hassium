@@ -4,15 +4,18 @@ extern crate rust_sc2;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rust_sc2::{prelude::*, units::*};
 use std::{iter::Sum, collections::HashSet};
-
+use std::time;
 type SRes = SC2Result<()>;
 
+//TODO replace this with home dir from the dirs crate and maybe should go into the cache dir not
+//the home dir
+const REPLAY_DIR:&str = "/home/fedora/";
 
 #[bot]
 #[derive(Default)]
 struct Hassium{
-//    latest_hatch:Option<Unit>,
-//    latest_sat: u8
+    latest_hatch:Option<Unit>,
+    latest_sat: u8
 }
 impl Hassium{
     fn next_hatch_loc(units:&PlayerUnits, expands: Vec<Point2>) -> Point2{
@@ -43,11 +46,11 @@ impl Hassium{
     }
 }
 impl Player for Hassium{
-//    fn on_start(&mut self) -> SC2Result<()> {
-//        self.latest_hatch = None;//Some(self.units.my.townhalls.first().unwrap().clone());
-//        self.latest_sat = 12;
-//        Ok(())
-//    }
+    fn on_start(&mut self) -> SC2Result<()> {
+        self.latest_hatch = Some(self.units.my.townhalls.first().unwrap().clone());
+        self.latest_sat = 12;
+        Ok(())
+    }
     fn get_player_settings(&self) -> PlayerSettings {
         PlayerSettings::new(Race::Zerg)
             .with_name("Hassium")
@@ -55,7 +58,7 @@ impl Player for Hassium{
             .raw_affects_selection(false)
     }
     fn on_step(&mut self, iteration: usize) -> SRes {
-        /*
+        
         let OVIE_BUILD:HashSet<AbilityId> = {
             let mut t = HashSet::new();
             t.insert(AbilityId::LarvaTrainOverlord);
@@ -64,7 +67,12 @@ impl Player for Hassium{
 
         while self.latest_sat < 16 {
             if self.can_afford(UnitTypeId::Drone, true) {
-                self.units.my.larvas.pop().unwrap().train(UnitTypeId::Drone,false);
+                match self.units.my.larvas.pop(){
+                    Some(larva)=>{
+                        larva.train(UnitTypeId::Drone,false);
+                    }
+                    None=> return Ok(())
+                }
             }
             else if self.supply_left < 1 {
                 //should probably split off this condition into a method
@@ -88,14 +96,25 @@ impl Player for Hassium{
                 .unwrap();
             
         }
-        */
+
         Ok(())
     }
 }
 
 fn main() -> SRes {
+    let location = format!("{}{}.SC2Replay",
+        REPLAY_DIR,
+        time::SystemTime::now()
+            .duration_since(time::SystemTime::UNIX_EPOCH).unwrap()
+            .as_secs());
+    let options ={ 
+        let mut o = LaunchOptions::default();
+        o.save_replay_as = Some(location.as_str());
+        o    
+    };
     run_vs_computer(&mut Hassium::default(), 
-        Computer::new(Race::Zerg,Difficulty::Easy,Some(AIBuild::Macro)),
+        Computer::new(Race::Zerg,Difficulty::Hard,Some(AIBuild::Rush)),
         "BerlingradAIE",
-        LaunchOptions::default())
+        options
+        )
 }
