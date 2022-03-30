@@ -11,8 +11,8 @@ type SRes = SC2Result<()>;
 #[bot]
 #[derive(Default)]
 struct Hassium{
-    latest_hatch:Option<Unit>,
-    latest_sat: u8
+//    latest_hatch:Option<Unit>,
+//    latest_sat: u8
 }
 impl Hassium{
     fn next_hatch_loc(units:&PlayerUnits, expands: Vec<Point2>) -> Point2{
@@ -43,11 +43,11 @@ impl Hassium{
     }
 }
 impl Player for Hassium{
-    fn on_start(&mut self) -> SC2Result<()> {
-        self.latest_hatch = Some(self.units.my.townhalls.first().unwrap().clone());
-        self.latest_sat = 12;
-        Ok(())
-    }
+//    fn on_start(&mut self) -> SC2Result<()> {
+//        self.latest_hatch = None;//Some(self.units.my.townhalls.first().unwrap().clone());
+//        self.latest_sat = 12;
+//        Ok(())
+//    }
     fn get_player_settings(&self) -> PlayerSettings {
         PlayerSettings::new(Race::Zerg)
             .with_name("Hassium")
@@ -55,7 +55,7 @@ impl Player for Hassium{
             .raw_affects_selection(false)
     }
     fn on_step(&mut self, iteration: usize) -> SRes {
-
+        /*
         let OVIE_BUILD:HashSet<AbilityId> = {
             let mut t = HashSet::new();
             t.insert(AbilityId::LarvaTrainOverlord);
@@ -88,17 +88,14 @@ impl Player for Hassium{
                 .unwrap();
             
         }
-
+        */
         Ok(())
     }
 }
 
 fn main() -> SRes {
-    run_vs_human(&mut Hassium::default(), 
-        PlayerSettings::new(Race::Zerg)
-            .with_name("pagwin")
-            .raw_crop_to_playable_area(false)
-            .raw_affects_selection(true),
+    run_vs_computer(&mut Hassium::default(), 
+        Computer::new(Race::Zerg,Difficulty::Easy,Some(AIBuild::Macro)),
         "BerlingradAIE",
         LaunchOptions::default())
 }
