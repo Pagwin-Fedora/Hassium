@@ -1,7 +1,7 @@
 extern crate rust_sc2;
 
 
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+//use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rust_sc2::{prelude::*, units::*};
 use std::{iter::Sum, collections::HashSet};
 use std::time;
@@ -15,7 +15,8 @@ const REPLAY_DIR:&str = "/home/fedora/";
 #[derive(Default)]
 struct Hassium{
     latest_hatch:Option<Unit>,
-    latest_sat: u8
+    latest_sat: u8,
+    awaiting_expansion:bool
 }
 impl Hassium{
     fn next_hatch_loc(units:&PlayerUnits, expands: Vec<Point2>) -> Point2{
@@ -58,46 +59,65 @@ impl Player for Hassium{
             .raw_affects_selection(false)
     }
     fn on_step(&mut self, iteration: usize) -> SRes {
-        
+        if iteration %10 == 0{
+            println!("{}\t{}\t{}\t{}",iteration,self.units.my.workers.len(),self.latest_sat,self.units.my.larvas.len());
+        }
         let OVIE_BUILD:HashSet<AbilityId> = {
             let mut t = HashSet::new();
             t.insert(AbilityId::LarvaTrainOverlord);
             t
         };
+        for t in self.units.my.townhalls.clone() {
+            t.command(AbilityId::RallyWorkers, 
+                Target::Pos(self.latest_hatch.clone()
+                    .map(|h|h.position())
+                    .unwrap_or(Point2::default()))
+                , false)
+        }
 
-        if self.latest_sat < 16 {
-            if self.can_afford(UnitTypeId::Drone, true) {
+        if self.can_afford(UnitTypeId::Drone, true) && self.latest_sat < 17 && !self.awaiting_expansion{
+            match self.units.my.larvas.pop(){
+                Some(larva)=>{
+                    larva.train(UnitTypeId::Drone,false);
+                    self.latest_sat += 1;
+                },
+                None=>{}
+            }
+        }
+
+        if self.supply_left <= 2 {
+            //should probably split off this condition into a method
+            if Hassium::currently_ordering(&self.units.my.units, &OVIE_BUILD).is_empty() {
                 match self.units.my.larvas.pop(){
-                    Some(larva)=>{
-                        larva.train(UnitTypeId::Drone,false);
-                        self.latest_sat +=1;
-                    },
+                    Some(larva)=>larva.train(UnitTypeId::Overlord, false),
                     None=>{}
                 }
             }
-            else if self.supply_left < 1 {
-                //should probably split off this condition into a method
-                if Hassium::currently_ordering(&self.units.my.units, &OVIE_BUILD).is_empty() {
-                    self.units.my.larvas.pop().unwrap().train(UnitTypeId::Overlord, false);
-                }
-            }
         }
-        
-        else if self.minerals >= 350 && !self.units.my.larvas.is_empty(){
 
+        if self.can_afford(UnitTypeId::Hatchery, false) && !self.awaiting_expansion{
+            println!("hatch");
             let dist = |point:Point2| self.latest_hatch.clone().unwrap()
                 .position().distance(point);
 
             let cmp = |f:&f32,s:&f32|f32::partial_cmp(f,s).unwrap();
-
-            self.units.my.workers.iter()
-                .map(Unit::position)
-                .map(dist)
-                .min_by(cmp)
-                .unwrap();
+            
+            self.units.my.workers.pop().unwrap()
+                .build(UnitTypeId::Hatchery, self.free_expansions().next().unwrap().loc, true);
+            self.awaiting_expansion = true;
+            self.latest_hatch = None;
+            self.latest_sat = 0;
+        }
+        if self.awaiting_expansion {
+            match self.units.my.townhalls.not_ready().first(){
+                Some(base)=>{
+                    self.latest_hatch = Some(base.clone());
+                    self.awaiting_expansion = false;
+                },
+                None=>{}
+            }
             
         }
-
         Ok(())
     }
 }
