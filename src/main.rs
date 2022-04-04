@@ -1,5 +1,5 @@
 extern crate rust_sc2;
-
+mod framework;
 
 //use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rust_sc2::{prelude::*, units::*};

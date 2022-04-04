@@ -9,3 +9,4 @@ edition = "2021"
 # if git version needed 
 rust-sc2 = { version = "^1.1.0"}#, git = "https://github.com/UltraMachine/rust-sc2", features = ["wine_sc2"]}
 rayon = "^1.5.1"
+
